@@ -18,17 +18,7 @@ code {
 }
 ```
 
----
 
-### **FILE 5: `src/App.js`** ⭐ **MOST IMPORTANT**
-**Where to put it:** In a folder called `src`
-
-**Content:** Copy the ENTIRE content from **WorkTripPlanner_WithEmailWhitelist.jsx** file (you already have it above)
-
----
-
-### **FILE 6: `.gitignore`**
-**Where to put it:** Root folder (no subfolder)
 ```
 # dependencies
 /node_modules
