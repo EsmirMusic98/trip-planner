@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, Users, LogOut, Menu, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const WorkTripPlanner = () => {
   // ===== EMAIL WHITELIST CONFIGURATION =====
