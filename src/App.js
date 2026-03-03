@@ -5,9 +5,7 @@ const WorkTripPlanner = () => {
   // Add your company email domains here
   // Example: ["@yourcompany.com", "@company.co.uk", "john@example.com"]
   const ALLOWED_EMAILS = [
-    "@yourcompany.com",     // Anyone with this domain can access
-    "@company.com",         // Add more domains as needed
-    "specific.person@gmail.com"  // Or add specific individual emails
+    "@tess.no",     // Anyone with this domain can access
   ];
   // ========================================
 
