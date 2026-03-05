@@ -23,12 +23,12 @@ const WorkTripPlanner = () => {
   const [teamMembers, setTeamMembers] = useState([]);
 
   // Load trips when team/user changes
-  useEffect(() => {
+useEffect(() => {
     if (currentTeam && currentUser) {
       loadTrips();
       loadTeamMembers();
     }
-  }, [currentTeam, currentUser]);
+  }, []);
 
   const loadTrips = async () => {
     try {
