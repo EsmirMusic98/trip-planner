@@ -1,20 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get } from "firebase/database";
-
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDMKGiefkU1-o0IZ5TELJg-nS1h7jZWWc4",
-  authDomain: "trip-planner-ba623.firebaseapp.com",
-  projectId: "trip-planner-ba623",
-  storageBucket: "trip-planner-ba623.firebasestorage.app",
-  messagingSenderId: "339460837748",
-  appId: "1:339460837748:web:04c883779adc8dde699c21"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+import React, { useState } from 'react';
 
 const WorkTripPlanner = () => {
   // ===== EMAIL WHITELIST CONFIGURATION =====
@@ -34,37 +18,6 @@ const WorkTripPlanner = () => {
   const [newTrip, setNewTrip] = useState({ startDate: '', endDate: '', location: '', notes: '' });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-
-  // Load data from Firebase on mount
-  useEffect(() => {
-    loadDataFromFirebase();
-  }, []);
-
-  const loadDataFromFirebase = async () => {
-    try {
-      const teamsRef = ref(database, 'teams');
-      const snapshot = await get(teamsRef);
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        setTeams(data);
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error loading data from Firebase:', error);
-      setLoading(false);
-    }
-  };
-
-  const saveTeamsToFirebase = async (updatedTeams) => {
-    try {
-      const teamsRef = ref(database, 'teams');
-      await set(teamsRef, updatedTeams);
-    } catch (error) {
-      console.error('Error saving to Firebase:', error);
-      alert('Error saving data. Please try again.');
-    }
-  };
 
   const isEmailAllowed = (email) => {
     return ALLOWED_EMAILS.some(allowedEmail => {
@@ -97,8 +50,6 @@ const WorkTripPlanner = () => {
 
     const newUser = { id: Date.now(), name, email };
     updatedTeams[teamCode].members.push(newUser);
-    
-    saveTeamsToFirebase(updatedTeams);
     setTeams(updatedTeams);
     setCurrentTeam(teamCode);
     setCurrentUser(newUser);
@@ -156,8 +107,6 @@ const WorkTripPlanner = () => {
     const updatedTeams = { ...teams };
     const updatedTrips = [...(updatedTeams[currentTeam].trips || []), trip];
     updatedTeams[currentTeam].trips = updatedTrips;
-    
-    saveTeamsToFirebase(updatedTeams);
     setTeams(updatedTeams);
     setTrips(updatedTrips);
 
@@ -169,8 +118,6 @@ const WorkTripPlanner = () => {
     const updatedTeams = { ...teams };
     const updatedTrips = updatedTeams[currentTeam].trips.filter(t => t.id !== tripId);
     updatedTeams[currentTeam].trips = updatedTrips;
-    
-    saveTeamsToFirebase(updatedTeams);
     setTeams(updatedTeams);
     setTrips(updatedTrips);
   };
@@ -190,17 +137,6 @@ const WorkTripPlanner = () => {
   const monthDays = getDaysInMonth(currentDate);
   const firstDay = getFirstDayOfMonth(currentDate);
   const calendarDays = Array(firstDay).fill(null).concat(Array.from({ length: monthDays }, (_, i) => i + 1));
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <div className="text-white text-center">
-          <h1 className="text-3xl font-bold mb-4">Loading TripSync...</h1>
-          <p className="text-slate-400">Connecting to database</p>
-        </div>
-      </div>
-    );
-  }
 
   if (view === 'auth') {
     return (
@@ -425,30 +361,4 @@ const WorkTripPlanner = () => {
             <form onSubmit={addTrip} className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Location</label>
-                <input type="text" value={newTrip.location} onChange={(e) => setNewTrip({ ...newTrip, location: e.target.value })} placeholder="e.g., New York" className="w-full px-4 py-2 rounded-lg border border-slate-300" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
-                <input type="date" value={newTrip.startDate} onChange={(e) => setNewTrip({ ...newTrip, startDate: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-slate-300" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
-                <input type="date" value={newTrip.endDate} onChange={(e) => setNewTrip({ ...newTrip, endDate: e.target.value })} className="w-full px-4 py-2 rounded-lg border border-slate-300" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Notes (optional)</label>
-                <textarea value={newTrip.notes} onChange={(e) => setNewTrip({ ...newTrip, notes: e.target.value })} placeholder="Purpose or details" className="w-full px-4 py-2 rounded-lg border border-slate-300 resize-none" rows="3" />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200">Cancel</button>
-                <button type="submit" className="flex-1 px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">Add Trip</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default WorkTripPlanner;
+                <input type="text" value={newTrip.location} onChange={(
