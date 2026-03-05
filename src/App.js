@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase Configuration
@@ -22,15 +22,8 @@ const WorkTripPlanner = () => {
   const [loading, setLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState([]);
 
-  // Load trips when team/user changes
-useEffect(() => {
-    if (currentTeam && currentUser) {
-      loadTrips();
-      loadTeamMembers();
-    }
-  }, []);
-
-  const loadTrips = async () => {
+  const loadTrips = useCallback(async () => {
+    if (!currentTeam) return;
     try {
       const { data, error } = await supabase
         .from('trips')
@@ -43,9 +36,10 @@ useEffect(() => {
     } catch (error) {
       console.error('Error loading trips:', error);
     }
-  };
+  }, [currentTeam]);
 
-  const loadTeamMembers = async () => {
+  const loadTeamMembers = useCallback(async () => {
+    if (!currentTeam) return;
     try {
       const { data, error } = await supabase
         .from('team_members')
@@ -57,7 +51,18 @@ useEffect(() => {
     } catch (error) {
       console.error('Error loading team members:', error);
     }
-  };
+  }, [currentTeam]);
+
+  const handleLoadTeamData = useCallback(async () => {
+    if (currentTeam && currentUser) {
+      await loadTrips();
+      await loadTeamMembers();
+    }
+  }, [currentTeam, currentUser, loadTrips, loadTeamMembers]);
+
+  React.useEffect(() => {
+    handleLoadTeamData();
+  }, [handleLoadTeamData]);
 
   const isEmailAllowed = (email) => {
     return ALLOWED_EMAILS.some(allowedEmail => {
@@ -89,7 +94,6 @@ useEffect(() => {
       const userId = Date.now();
       const newUser = { id: userId, name, email };
 
-      // Add member to database
       const { error: insertError } = await supabase
         .from('team_members')
         .insert([{
@@ -104,8 +108,6 @@ useEffect(() => {
       setCurrentTeam(teamCode);
       setCurrentUser(newUser);
       setView('dashboard');
-      loadTeamMembers();
-      loadTrips();
       e.target.reset();
     } catch (error) {
       console.error('Signup error:', error);
@@ -137,8 +139,6 @@ useEffect(() => {
         setCurrentTeam(teamCode);
         setCurrentUser({ id: user.user_id, name: user.name, email: user.email });
         setView('dashboard');
-        loadTeamMembers();
-        loadTrips();
         e.target.reset();
       } else {
         setErrorMessage('Team or email not found. Please check and try again.');
@@ -183,7 +183,7 @@ useEffect(() => {
 
       setNewTrip({ startDate: '', endDate: '', location: '', notes: '' });
       setShowModal(false);
-      loadTrips();
+      await loadTrips();
     } catch (error) {
       console.error('Error adding trip:', error);
       alert('Error saving trip. Please try again.');
@@ -200,7 +200,7 @@ useEffect(() => {
         .eq('id', tripId);
 
       if (error) throw error;
-      loadTrips();
+      await loadTrips();
     } catch (error) {
       console.error('Error deleting trip:', error);
       alert('Error deleting trip. Please try again.');
