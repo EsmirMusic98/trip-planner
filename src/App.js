@@ -37,8 +37,15 @@ const WorkTripPlanner = () => {
   const [loading, setLoading] = useState(true);
 
   // Load data from Firebase on mount
-  useEffect(() => {
-    loadDataFromFirebase();
+const loadDataFromFirebase = async () => {
+  try {
+    setLoading(false);
+    return;
+  } catch (error) {
+    console.error('Error loading data from Firebase:', error);
+    setLoading(false);
+  }
+};
   }, []);
 
   const loadDataFromFirebase = async () => {
