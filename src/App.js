@@ -1,11 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, get, remove } from "firebase/database";
+
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDMKGiefkU1-o0IZ5TELJg-nS1h7jZWWc4",
+  authDomain: "trip-planner-ba623.firebaseapp.com",
+  projectId: "trip-planner-ba623",
+  storageBucket: "trip-planner-ba623.firebasestorage.app",
+  messagingSenderId: "339460837748",
+  appId: "1:339460837748:web:04c883779adc8dde699c21"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
 const WorkTripPlanner = () => {
   // ===== EMAIL WHITELIST CONFIGURATION =====
-  // Add your company email domains here
-  // Example: ["@yourcompany.com", "@company.co.uk", "john@example.com"]
   const ALLOWED_EMAILS = [
-    "@tess.no",     // Anyone with this domain can access
+    "@tess.no"
   ];
   // ========================================
 
@@ -20,15 +34,43 @@ const WorkTripPlanner = () => {
   const [newTrip, setNewTrip] = useState({ startDate: '', endDate: '', location: '', notes: '' });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Check if email is in the whitelist
+  // Load data from Firebase on mount
+  useEffect(() => {
+    loadDataFromFirebase();
+  }, []);
+
+  const loadDataFromFirebase = async () => {
+    try {
+      const teamsRef = ref(database, 'teams');
+      const snapshot = await get(teamsRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        setTeams(data);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading data from Firebase:', error);
+      setLoading(false);
+    }
+  };
+
+  const saveTeamsToFirebase = async (updatedTeams) => {
+    try {
+      const teamsRef = ref(database, 'teams');
+      await set(teamsRef, updatedTeams);
+    } catch (error) {
+      console.error('Error saving to Firebase:', error);
+      alert('Error saving data. Please try again.');
+    }
+  };
+
   const isEmailAllowed = (email) => {
     return ALLOWED_EMAILS.some(allowedEmail => {
       if (allowedEmail.startsWith('@')) {
-        // Domain check: @company.com
         return email.toLowerCase().endsWith(allowedEmail.toLowerCase());
       } else {
-        // Specific email check: user@example.com
         return email.toLowerCase() === allowedEmail.toLowerCase();
       }
     });
@@ -43,23 +85,24 @@ const WorkTripPlanner = () => {
     const email = formData.get('email').trim();
     const name = formData.get('name').trim();
 
-    // ===== EMAIL WHITELIST CHECK =====
     if (!isEmailAllowed(email)) {
       setErrorMessage(`❌ Access Denied\n\nYour email "${email}" is not authorized to access this app.\n\nIf you believe this is an error, contact your administrator.`);
       return;
     }
-    // ==================================
 
-    if (!teams[teamCode]) {
-      teams[teamCode] = { members: [], trips: [] };
+    const updatedTeams = { ...teams };
+    if (!updatedTeams[teamCode]) {
+      updatedTeams[teamCode] = { members: [], trips: [] };
     }
 
     const newUser = { id: Date.now(), name, email };
-    teams[teamCode].members.push(newUser);
-    setTeams({ ...teams });
+    updatedTeams[teamCode].members.push(newUser);
+    
+    saveTeamsToFirebase(updatedTeams);
+    setTeams(updatedTeams);
     setCurrentTeam(teamCode);
     setCurrentUser(newUser);
-    setTrips(teams[teamCode].trips || []);
+    setTrips(updatedTeams[teamCode].trips || []);
     setView('dashboard');
     e.target.reset();
   };
@@ -104,30 +147,32 @@ const WorkTripPlanner = () => {
       userId: currentUser.id,
       userName: currentUser.name,
       userEmail: currentUser.email,
-      startDate: new Date(newTrip.startDate),
-      endDate: new Date(newTrip.endDate),
+      startDate: newTrip.startDate,
+      endDate: newTrip.endDate,
       location: newTrip.location,
       notes: newTrip.notes,
     };
 
-    const updatedTrips = [...trips, trip];
+    const updatedTeams = { ...teams };
+    const updatedTrips = [...(updatedTeams[currentTeam].trips || []), trip];
+    updatedTeams[currentTeam].trips = updatedTrips;
+    
+    saveTeamsToFirebase(updatedTeams);
+    setTeams(updatedTeams);
     setTrips(updatedTrips);
-    if (teams[currentTeam]) {
-      teams[currentTeam].trips = updatedTrips;
-      setTeams({ ...teams });
-    }
 
     setNewTrip({ startDate: '', endDate: '', location: '', notes: '' });
     setShowModal(false);
   };
 
   const deleteTrip = (tripId) => {
-    const updatedTrips = trips.filter(t => t.id !== tripId);
+    const updatedTeams = { ...teams };
+    const updatedTrips = updatedTeams[currentTeam].trips.filter(t => t.id !== tripId);
+    updatedTeams[currentTeam].trips = updatedTrips;
+    
+    saveTeamsToFirebase(updatedTeams);
+    setTeams(updatedTeams);
     setTrips(updatedTrips);
-    if (teams[currentTeam]) {
-      teams[currentTeam].trips = updatedTrips;
-      setTeams({ ...teams });
-    }
   };
 
   const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -145,6 +190,17 @@ const WorkTripPlanner = () => {
   const monthDays = getDaysInMonth(currentDate);
   const firstDay = getFirstDayOfMonth(currentDate);
   const calendarDays = Array(firstDay).fill(null).concat(Array.from({ length: monthDays }, (_, i) => i + 1));
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <h1 className="text-3xl font-bold mb-4">Loading TripSync...</h1>
+          <p className="text-slate-400">Connecting to database</p>
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'auth') {
     return (
